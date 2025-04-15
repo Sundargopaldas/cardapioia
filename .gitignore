@@ -1,0 +1,25 @@
+# Arquivos gerados
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.xlsx
+*.xls
+
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# Arquivos de upload
+uploads/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Outros
+.DS_Store 
