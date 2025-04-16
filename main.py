@@ -1,9 +1,11 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Request
 from pydantic import BaseModel
 import pandas as pd
 import os
 from typing import List
 from datetime import datetime
+import shutil
+from pathlib import Path
 
 app = FastAPI()
 
@@ -63,6 +65,94 @@ async def upload_cardapio(file: UploadFile = File(...)):
         if os.path.exists(file_name):
             os.remove(file_name)
         return {"error": f"Erro ao processar arquivo: {str(e)}"}
+
+@app.post("/upload-logo")
+async def upload_logo(file: UploadFile = File(...)):
+    # Verifica se o arquivo é uma imagem
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        raise HTTPException(status_code=400, detail="Arquivo deve ser uma imagem (PNG, JPG, JPEG ou GIF)")
+    
+    # Cria um nome único para o arquivo
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_extension = Path(file.filename).suffix
+    file_name = f"uploads/logo/logo_{timestamp}{file_extension}"
+    
+    try:
+        # Salva o arquivo
+        contents = await file.read()
+        with open(file_name, 'wb') as f:
+            f.write(contents)
+        
+        return {
+            "message": "Logo enviada com sucesso",
+            "filename": file_name
+        }
+    except Exception as e:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar logo: {str(e)}")
+
+@app.post("/upload-images")
+async def upload_images(files: List[UploadFile] = File(...)):
+    if len(files) == 0:
+        raise HTTPException(status_code=400, detail="Nenhum arquivo enviado")
+    
+    saved_files = []
+    for file in files:
+        # Verifica se o arquivo é uma imagem
+        if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            continue
+        
+        # Cria um nome único para o arquivo
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_extension = Path(file.filename).suffix
+        file_name = f"uploads/images/image_{timestamp}_{len(saved_files)}{file_extension}"
+        
+        try:
+            # Salva o arquivo
+            contents = await file.read()
+            with open(file_name, 'wb') as f:
+                f.write(contents)
+            
+            saved_files.append(file_name)
+        except Exception as e:
+            if os.path.exists(file_name):
+                os.remove(file_name)
+            continue
+    
+    if not saved_files:
+        raise HTTPException(status_code=400, detail="Nenhuma imagem válida foi enviada")
+    
+    return {
+        "message": f"{len(saved_files)} imagens enviadas com sucesso",
+        "files": saved_files
+    }
+
+@app.post("/upload-image")
+async def upload_image(file: UploadFile = File(...)):
+    # Verifica se o arquivo é uma imagem
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        raise HTTPException(status_code=400, detail="Arquivo deve ser uma imagem (PNG, JPG, JPEG ou GIF)")
+    
+    # Cria um nome único para o arquivo
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_extension = Path(file.filename).suffix
+    file_name = f"uploads/images/image_{timestamp}{file_extension}"
+    
+    try:
+        # Salva o arquivo
+        contents = await file.read()
+        with open(file_name, 'wb') as f:
+            f.write(contents)
+        
+        return {
+            "message": "Imagem enviada com sucesso",
+            "file": file_name
+        }
+    except Exception as e:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar imagem: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

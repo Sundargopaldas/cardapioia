@@ -14,6 +14,8 @@ ENV/
 
 # Arquivos de upload
 uploads/
+uploads/logo/
+uploads/images/
 
 # VS Code
 .vscode/
