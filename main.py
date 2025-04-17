@@ -6,6 +6,8 @@ from typing import List
 from datetime import datetime
 import shutil
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
+import glob
 
 app = FastAPI()
 
@@ -153,6 +155,54 @@ async def upload_image(file: UploadFile = File(...)):
         if os.path.exists(file_name):
             os.remove(file_name)
         raise HTTPException(status_code=500, detail=f"Erro ao salvar imagem: {str(e)}")
+
+@app.post("/gerar-template-menu")
+async def gerar_template_menu():
+    try:
+        # Dimensões do template
+        width = 800
+        height = 1200
+        header_height = 200
+        
+        # Encontrar todos os logos
+        logos = glob.glob("uploads/logo/*")
+        if not logos:
+            raise HTTPException(status_code=404, detail="Nenhum logo encontrado")
+            
+        templates_gerados = []
+        
+        for i, logo_path in enumerate(logos[:3], 1):
+            # Criar template base
+            template = Image.new('RGB', (width, height), color='#2B3A2B')  # Verde escuro
+            
+            # Carregar e redimensionar logo
+            logo = Image.open(logo_path)
+            # Manter proporção
+            logo_ratio = min(header_height/logo.height, (width-40)/logo.width)
+            new_size = (int(logo.width * logo_ratio), int(logo.height * logo_ratio))
+            logo = logo.resize(new_size, Image.Resampling.LANCZOS)
+            
+            # Posicionar logo no centro do cabeçalho
+            logo_position = ((width - logo.width) // 2, (header_height - logo.height) // 2)
+            template.paste(logo, logo_position, logo if logo.mode == 'RGBA' else None)
+            
+            # Adicionar borda decorativa
+            draw = ImageDraw.Draw(template)
+            draw.rectangle([(20, 20), (width-20, height-20)], outline='#8B7355', width=2)
+            
+            # Salvar template
+            template_path = f"uploads/templates/menu_template_{i}.png"
+            os.makedirs("uploads/templates", exist_ok=True)
+            template.save(template_path, "PNG")
+            templates_gerados.append(template_path)
+            
+        return {
+            "message": f"{len(templates_gerados)} templates gerados com sucesso",
+            "templates": templates_gerados
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar templates: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
